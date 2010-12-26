@@ -3,4 +3,4 @@ It will handle photo thumbnailing, grouping by albums.
 
 The list of albums/pictures will be then exposed by REST webservices. (probably using JSON formatting)
 
-An HTML/JS frontend project is then to be written to use this server side moduleand handle the display part (probably YUI based).
+An HTML/JS frontend project is then to be written to use this server side module and handle the display part (probably YUI based).
