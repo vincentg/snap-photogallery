@@ -33,7 +33,8 @@ Executable snap-photogallery
     snap-core >= 0.3 && < 0.4,
     snap-server >= 0.3 && <0.4,
     text >= 0.11 && < 0.12,
-    time >= 1.1 && < 1.3
+    time >= 1.1 && < 1.3,
+    hsmagick >= 0.4 
 
   extensions: TypeSynonymInstances MultiParamTypeClasses
 
