@@ -17,12 +17,27 @@ import	System.FilePath
 import	Data.String.Utils
 import  Data.Ratio
 import  Data.Word
+import  Data.Char (toLower)
 import  Graphics.Transform.Magick.Images
 import  Graphics.Transform.Magick.Types (HImage, getImage, columns, rows)
 import  Foreign.Storable
 import	Monad
+import	Control.Monad
 
 data Dimension = Dimension { width :: Word, height :: Word }
+
+-- | Returns the maximum size between the width and the edeg
+getMax :: Dimension -> Word 
+getMax (Dimension x y) = max x y
+
+
+createAllThumbs :: FilePath -- ^ Albums path (support a path from the current directory or from the root)
+                -> FilePath -- ^ Suffix to be applied to the album path to store the thumbs
+                -> IO ()
+createAllThumbs root suffix = do
+    initializeMagick
+    albums <- listAlbumsM root
+    forM_ albums (`createAlbumThumbs` suffix)
 
 -- | This method create all the thumbnails of a given album
 createAlbumThumbs :: FilePath -- ^ Path of the album directory
@@ -33,30 +48,36 @@ createAlbumThumbs srcDir thumbSuffix = do
     files <- catch (listPicturesRM srcDir) (\e -> return [])
     if (not $ null files) 
       then do 
-        createDirectoryIfMissing True $ srcDir </> thumbSuffix
-        initializeMagick
-       -- forM_ 
+        let destDir = srcDir </> thumbSuffix
+        createDirectoryIfMissing True $ destDir
+        forM_ files (thumbImage destDir)
       else
 -- TODO Add error management here, it means that an IO error occured, or that no image was in the album
         return()
 
 -- | This method create the thumbnails of a given image
-thumbImage :: FilePath -- ^ Path of the image to thumbnail
-           -> FilePath -- ^ Path of the destination dir
+thumbImage :: FilePath -- ^ Path of the destination dir
+           -> FilePath -- ^ Path of the image to thumbnail 
            -> IO ()
-thumbImage imagePath destDir = do
+thumbImage destDir imagePath = do
     sourceImg <- readImage imagePath
-    thumbs <- calcReductionFactors sourceImg
+    sizes <- calcReductionFactors sourceImg
     let (path, ext) = splitExtension imagePath
-    let outputs = map (\x -> (uncurry max x, thumbnailImage (fst x) (snd x) sourceImg)) thumbs
-    mapM_ (\x -> writeImage (composePath (fst x) path ext) (snd x)) outputs
+    forM_ sizes $ \s -> do
+      let thumb = thumbnailImage (width s) (height s) sourceImg
+      writeImage (composePath (getMax s) path ext) thumb
+      destroyImage thumb
+    --let outputs = map (\s -> (getMax s, thumbnailImage (width s) (height s) sourceImg)) sizes
+    --mapM_ (\x -> writeImage (composePath (fst x) path ext) (snd x)) outputs
+    -- FIXME debug
+    putStrLn $ imagePath ++ " Thumbnails generated ---"
+    destroyImage sourceImg
   where
     composePath size path ext = destDir </> generateFileName (takeFileName path) size <.> ext
     generateFileName name size = name ++ "_th_" ++ show size ++ "px"
 
-
 calcReductionFactors :: HImage -- ^ The image to thumbnail
-                     -> IO [(Word, Word)] -- 
+                     -> IO [Dimension] -- 
 calcReductionFactors himg = do
     img <- peek $ getImage himg
     let colz = fromIntegral $ columns img
@@ -65,10 +86,17 @@ calcReductionFactors himg = do
     let scales = [1024, 720, 100]
     if colz > rowz
       then
-        return $ map (\x -> (truncate x , truncate $ x * ratio)) scales
+        return $ map (\x -> Dimension {
+                            width=(truncate x),
+                            height=(truncate $ x * ratio)
+                            }
+                     ) scales
       else
-        return $ map (\x -> (truncate $ x * 1/ratio, truncate x)) scales
-
+        return $ map (\x -> Dimension {
+                            width=(truncate $ x * 1/ratio),
+                            height=(truncate x)
+                            }
+                     ) scales
        
 {-
  IO errors are to be catched, like catch f (\e -> return [])
@@ -80,15 +108,32 @@ listAlbumsM path = do
     (getDirectoryContents $ fullPath) >>= 
       -- does not returns files that start with a dot, and only directories
       filterM (return . (/= '.') . head) >>= 
-      filterM (doesDirectoryExist . concatPath fullPath)
+      mapM (return . concatPath fullPath) >>=
+      filterM doesDirectoryExist
   where
     concatPath x y = normalise $ x </> y
 
 
 listPicturesRM :: FilePath -> IO [FilePath]
 listPicturesRM path = do
+    let formats = [".jpg",".png",".gif"]
     cur_path <- getCurrentDirectory
-    files <- recurseDir SystemFS $ normalise $ cur_path </> path
-    filterM doesFileExist files
+    (recurseDir SystemFS $ normalise $ cur_path </> path) >>=
+      -- filter only files with a supported extension
+      filterM (return . (`elem` formats) . takeExtension . map toLower) >>=
+      filterM doesFileExist 
 
+
+--TEST MAIN FUNCTION
+main :: IO ()
+main = do
+    putStrLn "Enter root directory (where the albums are located)"
+    root <- getLine
+    putStrLn "Enter suffix to be used for the thumbnails"
+    suffix <- getLine
+    putStrLn "Thx"
+    createAllThumbs root suffix
+    putStrLn "All Thumbs are created"
+   
+    
 
