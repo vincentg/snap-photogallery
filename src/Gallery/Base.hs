@@ -25,7 +25,6 @@ import  Data.Char (toLower)
 import  Graphics.Transform.Magick.Images
 import  Graphics.Transform.Magick.Types (HImage, getImage, columns, rows)
 import  Foreign.Storable
-import	Monad
 import	Control.Monad
 
 data Dimension = Dimension { width :: Word, height :: Word }
@@ -37,11 +36,11 @@ getMax (Dimension x y) = max x y
 -- | This method create all the thumbnails of a given album
 createAlbumThumbs :: FilePath -- ^ Path of the album directory
                   -> FilePath -- ^ Suffix to be applied to the album path to store the thumbs
-                  -> IO ([FilePath]) 
+                  -> IO [FilePath] 
 createAlbumThumbs srcDir thumbSuffix = do
 -- TODO log the exception
     files <- catch (listPicturesRM srcDir) (\e -> return [])
-    if (not $ null files) 
+    if not $ null files 
       then do 
         let destDir = srcDir </> thumbSuffix
         initializeMagick
@@ -78,22 +77,22 @@ calcReductionFactors himg = do
 
 computeFactors :: (Integral a) => a -> a -> [Dimension]
 computeFactors col row =
-    let colz = fromIntegral $ col
-        rowz = fromIntegral $ row
+    let colz = fromIntegral col
+        rowz = fromIntegral row
         ratio = rowz % colz
         scales = [1024, 720, 100]
     in
     if colz > rowz
         then
         map (\x -> Dimension {
-                     width=(truncate x),
-                     height=(truncate $ x * ratio)
+                     width = truncate x,
+                     height = truncate $ x * ratio
                   }
             ) scales
         else
         map (\x -> Dimension {
-                     width=(truncate $ x * 1/ratio),
-                     height=(truncate x)
+                     width = truncate $ x / ratio,
+                     height= truncate x
                   }
             ) scales
 
@@ -104,7 +103,7 @@ listAlbums :: FilePath -> IO [FilePath]
 listAlbums path = do
     cur_dir <- getCurrentDirectory 
     let fullPath = concatPath cur_dir path
-    (getDirectoryContents $ fullPath) >>= 
+    getDirectoryContents fullPath >>= 
       -- does not returns files that start with a dot, and only directories
       filterM (return . (/= '.') . head) >>= 
       mapM (return . concatPath fullPath) >>=
@@ -117,7 +116,7 @@ listPicturesRM :: FilePath -> IO [FilePath]
 listPicturesRM path = do
     let formats = [".jpg",".png",".gif"]
     cur_path <- getCurrentDirectory
-    (recurseDir SystemFS $ normalise $ cur_path </> path) >>=
+    recurseDir SystemFS (normalise $ cur_path </> path) >>=
       -- filter only files with a supported extension
       filterM (return . (`elem` formats) . takeExtension . map toLower) >>=
       filterM doesFileExist 
