@@ -78,24 +78,29 @@ calcReductionFactors :: HImage -- ^ The image to thumbnail
                      -> IO [Dimension] -- 
 calcReductionFactors himg = do
     img <- peek $ getImage himg
-    let colz = fromIntegral $ columns img
-    let rowz = fromIntegral $ rows img
-    let ratio = rowz % colz
-    let scales = [1024, 720, 100]
+    return $ computeFactors (columns img) (rows img)
+
+computeFactors :: (Integral a) => a -> a -> [Dimension]
+computeFactors col row =
+    let colz = fromIntegral $ col
+        rowz = fromIntegral $ row
+        ratio = rowz % colz
+        scales = [1024, 720, 100]
+    in
     if colz > rowz
-      then
-        return $ map (\x -> Dimension {
-                            width=(truncate x),
-                            height=(truncate $ x * ratio)
-                            }
-                     ) scales
-      else
-        return $ map (\x -> Dimension {
-                            width=(truncate $ x * 1/ratio),
-                            height=(truncate x)
-                            }
-                     ) scales
-       
+        then
+        map (\x -> Dimension {
+                     width=(truncate x),
+                     height=(truncate $ x * ratio)
+                  }
+            ) scales
+        else
+        map (\x -> Dimension {
+                     width=(truncate $ x * 1/ratio),
+                     height=(truncate x)
+                  }
+            ) scales
+
 {-
  IO errors are to be catched, like catch f (\e -> return [])
 -}
