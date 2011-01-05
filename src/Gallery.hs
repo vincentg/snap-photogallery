@@ -67,8 +67,6 @@ thumbImage destDir imagePath = do
       let thumb = thumbnailImage (width s) (height s) sourceImg
       writeImage (composePath (getMax s) path ext) thumb
       destroyImage thumb
-    --let outputs = map (\s -> (getMax s, thumbnailImage (width s) (height s) sourceImg)) sizes
-    --mapM_ (\x -> writeImage (composePath (fst x) path ext) (snd x)) outputs
     -- FIXME debug
     putStrLn $ imagePath ++ " Thumbnails generated ---"
     destroyImage sourceImg
