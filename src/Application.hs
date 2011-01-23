@@ -12,7 +12,6 @@ module Application
 
 import           Snap.Extension
 import           Snap.Extension.Heist.Impl
-import           Snap.Extension.Timer.Impl
 
 
 ------------------------------------------------------------------------------
@@ -29,7 +28,6 @@ type Application = SnapExtend ApplicationState
 -- between development and production modes.
 data ApplicationState = ApplicationState
     { templateState :: HeistState Application
-    , timerState    :: TimerState
     }
 
 
@@ -37,12 +35,6 @@ data ApplicationState = ApplicationState
 instance HasHeistState Application ApplicationState where
     getHeistState     = templateState
     setHeistState s a = a { templateState = s }
-
-
-------------------------------------------------------------------------------
-instance HasTimerState ApplicationState where
-    getTimerState     = timerState
-    setTimerState s a = a { timerState = s }
 
 
 ------------------------------------------------------------------------------
@@ -54,5 +46,4 @@ instance HasTimerState ApplicationState where
 applicationInitializer :: Initializer ApplicationState
 applicationInitializer = do
     heist <- heistInitializer "resources/templates"
-    timer <- timerInitializer
-    return $ ApplicationState heist timer
+    return $ ApplicationState heist 
