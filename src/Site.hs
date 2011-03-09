@@ -14,7 +14,6 @@ module Site
 import           Control.Applicative
 import           Data.Maybe
 import           Snap.Extension.Heist
-import           Snap.Extension.Timer
 import           Snap.Util.FileServe
 import           Snap.Types
 import           Text.Templating.Heist
@@ -29,13 +28,7 @@ import           Application
 -- Otherwise, the way the route table is currently set up, this action
 -- would be given every request.
 index :: Application ()
-index = ifTop $ heistLocal (bindSplices indexSplices) $ render "index"
-  where
-    indexSplices =
-        [ ("start-time",   startTimeSplice)
-        , ("current-time", currentTimeSplice)
-        ]
-
+index = ifTop $ heistLocal (bindSplices []) $ render "index"
 
 ------------------------------------------------------------------------------
 -- | Renders the echo page.

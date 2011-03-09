@@ -25,6 +25,7 @@ import  Data.Char (toLower)
 import  Graphics.Transform.Magick.Images
 import  Graphics.Transform.Magick.Types (HImage, getImage, columns, rows)
 import  Foreign.Storable
+import Foreign.ForeignPtr (withForeignPtr)
 import	Control.Monad
 
 data Dimension = Dimension { width :: Word, height :: Word }
@@ -71,9 +72,10 @@ thumbImage destDir imagePath = do
 
 calcReductionFactors :: HImage -- ^ The image to thumbnail
                      -> IO [Dimension] -- 
-calcReductionFactors himg = do
-    img <- peek $ getImage himg
-    return $ computeFactors (columns img) (rows img)
+calcReductionFactors himg = 
+    withForeignPtr (getImage himg) $ \p -> do
+      img <- peek p
+      return $ computeFactors (columns img) (rows img)
 
 computeFactors :: (Integral a) => a -> a -> [Dimension]
 computeFactors col row =
